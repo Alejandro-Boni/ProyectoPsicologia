@@ -4,113 +4,131 @@ from PIL import Image
 
 # Configuración de apariencia
 ctk.set_appearance_mode("Light") 
-ctk.set_default_color_theme("blue")
 
 class AppKalico(ctk.CTk):
     def __init__(self):
         super().__init__()
 
         self.title("KALICO - Gestión Psicológica")
-        self.geometry("900x600")
+        self.geometry("1100x750") # Un poco más amplia para que luzca el fondo
 
-        # Colores personalizados (basados en tu logo)
-        self.bg_color = "#F5F7FA"
-        self.sidebar_color = "#E8F3F1"
-        self.button_color = "#7FB7B2"
-        self.button_hover = "#6AA39E"
+        # Paleta de colores extraída del logo
+        self.bg_color = "#FFFFFF" # Fondo blanco puro
+        self.card_color = "#F0F7F6" # Un verde/azul muy tenue para las tarjetas
+        self.accent_color = "#7FB7B2" # El azul principal del logo
+        self.hover_color = "#FADADD"  # Rosa pastel del logo para el hover
         self.text_color = "#2F2F2F"
 
         self.configure(fg_color=self.bg_color)
 
-        # Configurar el sistema de cuadrícula (layout)
-        self.grid_columnconfigure(1, weight=1)
-        self.grid_rowconfigure(0, weight=1)
-
-        # --- MENU LATERAL ---
-        self.sidebar_frame = ctk.CTkFrame(self, width=200, corner_radius=0, fg_color=self.sidebar_color)
-        self.sidebar_frame.grid(row=0, column=0, sticky="nsew")
-        
-        self.logo_label = ctk.CTkLabel(
-            self.sidebar_frame, 
-            text="KALICO", 
-            font=ctk.CTkFont(size=24, weight="bold"),
-            text_color=self.text_color
-        )
-        self.logo_label.grid(row=0, column=0, padx=20, pady=20)
-
-        # Botones del menú
-        self.btn_pacientes = ctk.CTkButton(
-            self.sidebar_frame, 
-            text="Pacientes",
-            fg_color=self.button_color,
-            hover_color=self.button_hover,
-            command=self.click_pacientes
-        )
-        self.btn_pacientes.grid(row=1, column=0, padx=20, pady=10)
-
-        self.btn_citas = ctk.CTkButton(
-            self.sidebar_frame, 
-            text="Agenda de Citas",
-            fg_color=self.button_color,
-            hover_color=self.button_hover,
-            command=self.click_citas
-        )
-        self.btn_citas.grid(row=2, column=0, padx=20, pady=10)
-
-        self.btn_stats = ctk.CTkButton(
-            self.sidebar_frame, 
-            text="Estadísticas",
-            fg_color=self.button_color,
-            hover_color=self.button_hover,
-            command=self.click_stats
-        )
-        self.btn_stats.grid(row=3, column=0, padx=20, pady=10)
-
         # --- CONTENIDO PRINCIPAL ---
-        self.main_frame = ctk.CTkFrame(self, fg_color=self.bg_color)
-        self.main_frame.grid(row=0, column=1, sticky="nsew")
+        self.main_frame = ctk.CTkFrame(self, fg_color=self.bg_color, corner_radius=0)
+        self.main_frame.pack(fill="both", expand=True)
 
-        # Texto principal
-        self.main_content = ctk.CTkLabel(
-            self.main_frame, 
-            text="Bienvenido al Sistema KALICO",
-            font=ctk.CTkFont(size=20),
-            text_color=self.text_color
-        )
-        self.main_content.pack(pady=20)
-
-        # =========================
-        # MARCA DE AGUA
-        # =========================
+        # 1. MARCA DE AGUA (Forzada al fondo)
         base_dir = os.path.dirname(os.path.abspath(__file__))
         ruta_imagen = os.path.join(base_dir, "Imagen", "marcaDeAgua.jpeg")
 
         if os.path.exists(ruta_imagen):
-            imagen = Image.open(ruta_imagen)
-            imagen = imagen.resize((350, 350))  # tamaño de la marca de agua
-
-            self.bg_image = ctk.CTkImage(light_image=imagen, dark_image=imagen, size=(350, 350))
-
+            img_original = Image.open(ruta_imagen)
+            # Aumentamos el tamaño para que luzca bien detrás de las tarjetas
+            self.bg_image = ctk.CTkImage(light_image=img_original, size=(700, 700))
+            
             self.bg_label = ctk.CTkLabel(
-                self.main_frame,
-                text="",
-                image=self.bg_image
+                self.main_frame, 
+                text="", 
+                image=self.bg_image,
+                fg_color="transparent"
             )
-
-            # Centrar la marca de agua
+            # .place la pone en el centro exacto
             self.bg_label.place(relx=0.5, rely=0.5, anchor="center")
+            
+            # .lower() la manda al fondo de la "pila" de objetos
+            self.bg_label.lower()
+        else:
+            print(f"⚠️ No se encontró la imagen en: {ruta_imagen}")
 
-        # =========================
 
+        
+        # 2. ELEMENTOS SUPERIORES (Dibujados sobre el logo)
+        
+        # --- TÍTULO DE BIENVENIDA ---
+        self.welcome_label = ctk.CTkLabel(
+            self.main_frame, 
+            text="¡Bienvenida, Dra. Karen!", 
+            font=ctk.CTkFont(size=36, weight="bold"),
+            text_color=self.accent_color,
+            fg_color="transparent" # Para que se vea el logo detrás
+        )
+        self.welcome_label.pack(pady=(60, 10))
+
+        self.subtitle_label = ctk.CTkLabel(
+            self.main_frame, 
+            text="¿Qué gestionaremos hoy?", 
+            font=ctk.CTkFont(size=18),
+            text_color="gray",
+            fg_color="transparent"
+        )
+        self.subtitle_label.pack(pady=(0, 50))
+
+        # --- CONTENEDOR DE TARJETAS (Cards) ---
+        self.cards_container = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        self.cards_container.pack(pady=20)
+
+        # Crear las 3 tarjetas principales 
+        self.crear_tarjeta("Pacientes", "👥", 0, self.click_pacientes)
+        self.crear_tarjeta("Agenda", "📅", 1, self.click_citas)
+        self.crear_tarjeta("Estadísticas", "📊", 2, self.click_stats)
+
+    def crear_tarjeta(self, titulo, icono, columna, comando):
+        """Función para crear tarjetas interactivas"""
+        card = ctk.CTkFrame(
+            self.cards_container, 
+            width=240, 
+            height=300, 
+            fg_color=self.card_color,
+            corner_radius=25,
+            border_width=2,
+            border_color="#E0E0E0"
+        )
+        card.grid(row=0, column=columna, padx=25, pady=10)
+        card.grid_propagate(False) # Mantener el tamaño fijo
+
+        # Icono (usando texto por ahora, luego pondremos imágenes)
+        lbl_icon = ctk.CTkLabel(card, text=icono, font=ctk.CTkFont(size=65))
+        lbl_icon.pack(pady=(50, 10))
+
+        # Título de la tarjeta
+        lbl_title = ctk.CTkLabel(
+            card, 
+            text=titulo, 
+            font=ctk.CTkFont(size=22, weight="bold"),
+            text_color=self.text_color
+        )
+        lbl_title.pack(pady=12)
+
+        # Botón de acción dentro de la tarjeta
+        btn = ctk.CTkButton(
+            card, 
+            text="Ingresar", 
+            fg_color=self.accent_color,
+            hover_color=self.hover_color,
+            text_color="white",
+            corner_radius=15,
+            width=160,
+            command=comando
+        )
+        btn.pack(pady=(25, 0))
+
+    # --- FUNCIONES DE BOTONES (Se mantienen) ---
     def click_pacientes(self):
-        self.main_content.configure(text="Módulo de Pacientes Seleccionado")
+        print("Abriendo Módulo de Pacientes...")
 
     def click_citas(self):
-        self.main_content.configure(text="Módulo de Agenda Seleccionado")
+        print("Abriendo Agenda...")
 
     def click_stats(self):
-        self.main_content.configure(text="Módulo de Estadísticas Seleccionado")
-
+        print("Abriendo Estadísticas...")
 
 if __name__ == "__main__":
     app = AppKalico()
