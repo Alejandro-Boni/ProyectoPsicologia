@@ -1,6 +1,6 @@
 import os
 import customtkinter as ctk
-from PIL import Image
+from PIL import Image, ImageDraw
 
 # Configuración de apariencia
 ctk.set_appearance_mode("Light") 
@@ -21,32 +21,75 @@ class AppKalico(ctk.CTk):
 
         self.configure(fg_color=self.bg_color)
 
-        # --- CONTENIDO PRINCIPAL ---
-        self.main_frame = ctk.CTkFrame(self, fg_color=self.bg_color, corner_radius=0)
-        self.main_frame.pack(fill="both", expand=True)
-
-        # 1. MARCA DE AGUA (Forzada al fondo)
+        # Ruta de imagen
         base_dir = os.path.dirname(os.path.abspath(__file__))
         ruta_imagen = os.path.join(base_dir, "Imagen", "marcaDeAgua.jpeg")
 
+        # 1. MARCA DE AGUA REAL (FONDO)
         if os.path.exists(ruta_imagen):
-            img_original = Image.open(ruta_imagen)
-            # Aumentamos el tamaño para que luzca bien detrás de las tarjetas
-            self.bg_image = ctk.CTkImage(light_image=img_original, size=(700, 700))
-            
-            self.bg_label = ctk.CTkLabel(
-                self.main_frame, 
-                text="", 
-                image=self.bg_image,
-                fg_color="transparent"
+            img_original = Image.open(ruta_imagen).convert("RGBA")
+
+            # Tamaño grande tipo fondo
+            img_original = img_original.resize((800, 800))
+
+            # Opacidad visible
+            alpha = img_original.split()[3]
+            alpha = alpha.point(lambda p: 60)
+            img_original.putalpha(alpha)
+
+            self.bg_image = ctk.CTkImage(
+                light_image=img_original,
+                size=(800, 800)
             )
-            # .place la pone en el centro exacto
+
+            self.bg_label = ctk.CTkLabel(
+                self,   # 👈 CLAVE: usar la ventana
+                image=self.bg_image,
+                text=""
+            )
+
             self.bg_label.place(relx=0.5, rely=0.5, anchor="center")
-            
-            # .lower() la manda al fondo de la "pila" de objetos
             self.bg_label.lower()
+
         else:
             print(f"⚠️ No se encontró la imagen en: {ruta_imagen}")
+
+        # --- CONTENIDO PRINCIPAL ---
+        self.main_frame = ctk.CTkFrame(self, fg_color="transparent", corner_radius=0)
+        self.main_frame.pack(fill="both", expand=True)
+
+       
+
+        #  HEADER (LOGO + TEXTO)
+        self.header_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        self.header_frame.place(relx=0.02, rely=0.02, anchor="nw")
+
+        if os.path.exists(ruta_imagen):
+            img_logo = Image.open(ruta_imagen).resize((60, 60)).convert("RGBA")
+
+            # Máscara circular
+            mask = Image.new("L", (60, 60), 0)
+            draw = ImageDraw.Draw(mask)
+            draw.ellipse((0, 0, 60, 60), fill=255)
+
+            img_logo.putalpha(mask)
+
+            self.logo_img = ctk.CTkImage(light_image=img_logo, size=(60, 60))
+
+            self.logo_label = ctk.CTkLabel(
+                self.header_frame,
+                image=self.logo_img,
+                text=""
+            )
+            self.logo_label.pack(side="left", padx=(0, 10))
+
+        self.logo_text = ctk.CTkLabel(
+            self.header_frame,
+            text="KALICO",
+            font=ctk.CTkFont(size=24, weight="bold"),
+            text_color=self.accent_color
+        )
+        self.logo_text.pack(side="left")
 
 
         
