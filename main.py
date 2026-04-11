@@ -473,8 +473,16 @@ class AppKalico(ctk.CTk):
         tarjetas = [
             ("Pacientes",    "👥", PALETTE["teal"],     PALETTE["teal_dark"],    self.click_pacientes),
             ("Agenda",       "📅", PALETTE["rose"],     PALETTE["rose_dark"],    self.click_citas),
+            ("Historias",    "🧠", PALETTE["lavender"], "#A090D0",               self.click_historias),
+            ("Tratamientos", "💊", PALETTE["teal"],     PALETTE["teal_dark"],    self.click_tratamientos),
+            ("Notas",        "📝", PALETTE["rose"],     PALETTE["rose_dark"],    self.click_notas),
+            ("Pagos",        "💳", PALETTE["lavender"], "#A090D0",               self.click_pagos),
+            ("Progreso",     "📈", PALETTE["teal"],     PALETTE["teal_dark"],    self.click_progreso),
+            ("Recordatorios","🔔", PALETTE["rose"],     PALETTE["rose_dark"],    self.click_recordatorios),
+            ("Configuración","⚙️", PALETTE["lavender"], "#A090D0",               self.click_config),
             ("Estadísticas", "📊", PALETTE["lavender"], "#A090D0",               self.click_stats),
-        ]
+            ]
+        
         for titulo, icono, color, hover, cmd in tarjetas:
             self._crear_tarjeta(cards_row, titulo, icono, color, hover, cmd)
 
@@ -634,11 +642,135 @@ class AppKalico(ctk.CTk):
             messagebox.showerror("Error", str(e))
 
     def click_citas(self):
-        messagebox.showinfo("Próximamente", "El módulo de Agenda está en desarrollo. 📅")
+        self.limpiar_pantalla()
+        self._header_secundario(
+            "📅 Agenda de Citas",
+            PALETTE["rose_light"],
+            PALETTE["rose_dark"]
+        )
 
+        container = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        container.pack(fill="both", expand=True, padx=40, pady=20)
+
+        # Selector de paciente
+        ctk.CTkLabel(
+            container,
+            text="Seleccionar paciente",
+            font=ctk.CTkFont(size=14),
+            text_color=PALETTE["text"]
+        ).pack(anchor="w")
+
+        self.combo_pacientes = ctk.CTkComboBox(container, width=320)
+        self.combo_pacientes.pack(pady=8)
+
+        # Cargar pacientes
+        try:
+            res = supabase.table("pacientes").select("id,nombre_completo").execute()
+            self.pacientes_data = res.data or []
+            nombres = [p["nombre_completo"] for p in self.pacientes_data]
+            self.combo_pacientes.configure(values=nombres)
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
+
+        # Fecha
+        self.entry_fecha_cita = ctk.CTkEntry(
+            container,
+            placeholder_text="Fecha (AAAA-MM-DD)",
+            width=320
+        )
+        self.entry_fecha_cita.pack(pady=6)
+
+        # Hora
+        self.entry_hora_cita = ctk.CTkEntry(
+            container,
+            placeholder_text="Hora (HH:MM)",
+            width=320
+        )
+        self.entry_hora_cita.pack(pady=6)
+
+        # FUNCIÓN INTERNA
+        def guardar_cita():
+            nombre = self.combo_pacientes.get()
+            fecha = self.entry_fecha_cita.get()
+            hora = self.entry_hora_cita.get()
+
+            if not nombre or not fecha or not hora:
+                messagebox.showwarning("Atención", "Completa todos los campos")
+                return
+
+            paciente = next(
+                (p for p in self.pacientes_data if p["nombre_completo"] == nombre),
+                None
+            )
+
+            if not paciente:
+                messagebox.showwarning("Error", "Paciente no válido")
+                return
+
+            try:
+                supabase.table("citas").insert({
+                    "paciente_id": paciente["id"],
+                    "fecha": fecha,
+                    "hora": hora
+                }).execute()
+
+                messagebox.showinfo("Éxito", "Cita agendada correctamente")
+
+            except Exception as e:
+                messagebox.showerror("Error", str(e))
+
+        # BOTÓN
+        ctk.CTkButton(
+            container,
+            text="Agendar cita",
+            fg_color=PALETTE["rose"],
+            hover_color=PALETTE["rose_dark"],
+            text_color="white",
+            command=guardar_cita
+        ).pack(pady=12)
+     # ─────────────────────────────────────────────
+    # NUEVOS MÓDULOS
+    # ─────────────────────────────────────────────
+
+    def _modulo_generico(self, titulo):
+        self.limpiar_pantalla()
+        self._header_secundario(
+            titulo,
+            PALETTE["teal_light"],
+            PALETTE["teal_dark"]
+        )
+
+        ctk.CTkLabel(
+            self.main_frame,
+            text="🚧 Módulo en desarrollo",
+            font=ctk.CTkFont(size=18),
+            text_color=PALETTE["text"]
+        ).pack(pady=50)
+
+
+    def click_historias(self):
+        self._modulo_generico("🧠 Historias Clínicas")
+
+    def click_tratamientos(self):
+        self._modulo_generico("💊 Tratamientos")
+
+    def click_notas(self):
+        self._modulo_generico("📝 Notas de Sesión")
+
+    def click_pagos(self):
+        self._modulo_generico("💳 Pagos / Facturación")
+
+    def click_progreso(self):
+        self._modulo_generico("📈 Progreso del Paciente")
+
+    def click_recordatorios(self):
+        self._modulo_generico("🔔 Recordatorios")
+
+    def click_config(self):
+        self._modulo_generico("⚙️ Configuración")
+    
     def click_stats(self):
-        messagebox.showinfo("Próximamente", "El módulo de Estadísticas está en desarrollo. 📊")
-
+        self._modulo_generico("📊 Estadísticas")
 
 if __name__ == "__main__":
     app = AppKalico()
