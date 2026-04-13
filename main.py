@@ -4,7 +4,7 @@ from tkinter import messagebox
 import tkinter as tk
 
 import customtkinter as ctk
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageDraw
 from dotenv import load_dotenv
 from supabase import create_client, Client
 
@@ -17,84 +17,50 @@ if not url or not key:
     raise ValueError("Faltan variables SUPABASE_URL o SUPABASE_KEY en el archivo .env")
 
 supabase: Client = create_client(url, key)
-
 ctk.set_appearance_mode("Light")
 
-
 # ─────────────────────────────────────────────
-#  PALETA PASTEL PREMIUM (inspirada en el logo)
+#  PALETA PASTEL PREMIUM
 # ─────────────────────────────────────────────
 PALETTE = {
-    "bg":           "#FDF8F6",       # Blanco crema cálido
-    "bg2":          "#F9F1EE",       # Crema rosada secundaria
-    "card":         "#FFFFFF",       # Tarjetas blancas puras
-    "card_border":  "#F2E4E1",       # Borde rosado muy suave
-    "teal":         "#7EC8C8",       # Teal pastel (del logo)
-    "teal_dark":    "#5AACAC",       # Teal más profundo (hover)
-    "teal_light":   "#B8E4E4",       # Teal muy claro
-    "rose":         "#F4B8C1",       # Rosa pastel suave
-    "rose_dark":    "#E896A4",       # Rosa hover
-    "rose_light":   "#FDE8EC",       # Rosa muy claro
-    "lavender":     "#C9B8E8",       # Lavanda suave
-    "gold":         "#E8C97A",       # Dorado pastel premium
-    "text":         "#3D3044",       # Texto principal (ciruela oscuro)
-    "text_soft":    "#8A7A8F",       # Texto secundario
-    "text_light":   "#B8A8BF",       # Texto muy suave
-    "white":        "#FFFFFF",
-    "shadow":       "#EDD8D5",       # Sombra rosada
+    "bg":          "#FDF8F6",
+    "bg2":         "#F9F1EE",
+    "card":        "#FFFFFF",
+    "card_border": "#F2E4E1",
+    "teal":        "#7EC8C8",
+    "teal_dark":   "#5AACAC",
+    "teal_light":  "#D6F0F0",
+    "rose":        "#F4B8C1",
+    "rose_dark":   "#E896A4",
+    "rose_light":  "#FDE8EC",
+    "lavender":    "#C9B8E8",
+    "lav_dark":    "#A090D0",
+    "gold":        "#E8C97A",
+    "text":        "#3D3044",
+    "text_soft":   "#8A7A8F",
+    "text_light":  "#B8A8BF",
+    "white":       "#FFFFFF",
+    "shadow":      "#EDD8D5",
 }
 
 
-def make_gradient_image(w, h, color1, color2, vertical=True):
-    """Crea imagen PIL con gradiente entre dos colores hex."""
-    img = Image.new("RGB", (w, h))
-    r1, g1, b1 = int(color1[1:3], 16), int(color1[3:5], 16), int(color1[5:7], 16)
-    r2, g2, b2 = int(color2[1:3], 16), int(color2[3:5], 16), int(color2[5:7], 16)
-    for i in range(h if vertical else w):
-        t = i / (h - 1 if vertical else w - 1)
-        r = int(r1 + (r2 - r1) * t)
-        g = int(g1 + (g2 - g1) * t)
-        b = int(b1 + (b2 - b1) * t)
-        if vertical:
-            for x in range(w):
-                img.putpixel((x, i), (r, g, b))
-        else:
-            for y in range(h):
-                img.putpixel((i, y), (r, g, b))
-    return img
-
-
 def make_circle_image(pil_img, size, border_color_hex=None, border_width=4):
-    """Recorta imagen en círculo con borde opcional."""
     pil_img = pil_img.convert("RGBA").resize(size, Image.LANCZOS)
     mask = Image.new("L", size, 0)
     ImageDraw.Draw(mask).ellipse((0, 0, size[0]-1, size[1]-1), fill=255)
     result = Image.new("RGBA", size, (0, 0, 0, 0))
     result.paste(pil_img, mask=mask)
-
     if border_color_hex:
         border_img = Image.new("RGBA", size, (0, 0, 0, 0))
-        r, g, b = int(border_color_hex[1:3], 16), int(border_color_hex[3:5], 16), int(border_color_hex[5:7], 16)
+        r = int(border_color_hex[1:3], 16)
+        g = int(border_color_hex[3:5], 16)
+        b = int(border_color_hex[5:7], 16)
         ImageDraw.Draw(border_img).ellipse(
             (0, 0, size[0]-1, size[1]-1),
             outline=(r, g, b, 255), width=border_width
         )
         result = Image.alpha_composite(result, border_img)
     return result
-
-
-def make_pill_button_image(w, h, color_hex, hover=False):
-    """Imagen para botón redondeado con efecto de brillo."""
-    img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
-    r, g, b = int(color_hex[1:3], 16), int(color_hex[3:5], 16), int(color_hex[5:7], 16)
-    draw.rounded_rectangle([0, 0, w-1, h-1], radius=h//2, fill=(r, g, b, 255))
-    # Brillo superior
-    shine_h = h // 3
-    for i in range(shine_h):
-        alpha = int(80 * (1 - i / shine_h))
-        draw.line([(10, i+2), (w-10, i+2)], fill=(255, 255, 255, alpha))
-    return img
 
 
 # ════════════════════════════════════════════════════════
@@ -113,7 +79,6 @@ class PopupBuscarPaciente(ctk.CTkToplevel):
         self._build_ui()
 
     def _build_ui(self):
-        # Título decorativo
         title_frame = ctk.CTkFrame(self, fg_color=PALETTE["teal_light"], corner_radius=0, height=70)
         title_frame.pack(fill="x")
         title_frame.pack_propagate(False)
@@ -121,7 +86,6 @@ class PopupBuscarPaciente(ctk.CTkToplevel):
                      font=ctk.CTkFont(family="Georgia", size=22, weight="bold"),
                      text_color=PALETTE["teal_dark"]).place(relx=0.5, rely=0.5, anchor="center")
 
-        # Barra de búsqueda
         search_card = ctk.CTkFrame(self, fg_color=PALETTE["card"],
                                    corner_radius=18, border_width=1,
                                    border_color=PALETTE["card_border"])
@@ -152,7 +116,6 @@ class PopupBuscarPaciente(ctk.CTkToplevel):
                       font=ctk.CTkFont(size=14, weight="bold"),
                       command=self.buscar).pack(side="left")
 
-        # Encabezado tabla
         headers_frame = ctk.CTkFrame(self, fg_color=PALETTE["rose_light"],
                                      corner_radius=12, height=40)
         headers_frame.pack(padx=30, fill="x")
@@ -163,7 +126,6 @@ class PopupBuscarPaciente(ctk.CTkToplevel):
                          font=ctk.CTkFont(size=12, weight="bold"),
                          text_color=PALETTE["rose_dark"]).pack(side="left", padx=8, pady=8)
 
-        # Scroll
         self.scroll = ctk.CTkScrollableFrame(self, fg_color="transparent")
         self.scroll.pack(padx=30, fill="both", expand=True, pady=(6, 0))
 
@@ -215,10 +177,10 @@ class PopupBuscarPaciente(ctk.CTkToplevel):
         acc.pack(side="left", padx=4)
 
         btn_cfg = [
-            ("👁", PALETTE["teal_light"],  PALETTE["teal"],      self._ver),
-            ("✏️", PALETTE["rose_light"],  PALETTE["rose_dark"], self._editar),
-            ("🗑", "#FADADD",              "#E88080",            self._eliminar),
-            ("📋", "#EDE8F8",              PALETTE["lavender"],  self._historial),
+            ("👁", PALETTE["teal_light"], PALETTE["teal"],     self._ver),
+            ("✏️", PALETTE["rose_light"], PALETTE["rose_dark"], self._editar),
+            ("🗑", "#FADADD",             "#E88080",            self._eliminar),
+            ("📋", "#EDE8F8",             PALETTE["lavender"],  self._historial),
         ]
         for emoji, bg, hover, fn in btn_cfg:
             ctk.CTkButton(acc, text=emoji, width=36, height=32,
@@ -228,23 +190,18 @@ class PopupBuscarPaciente(ctk.CTkToplevel):
                           command=lambda f=fn, pac=p, fw=fila: f(pac, fw) if f == self._eliminar else f(pac)
                           ).pack(side="left", padx=3)
 
-    # ── Acciones ──────────────────────────────────────────
-
     def _ver(self, p):
         win = ctk.CTkToplevel(self)
         win.title("Detalle"); win.geometry("430x390")
         win.configure(fg_color=PALETTE["bg"]); win.grab_set()
-
         h = ctk.CTkFrame(win, fg_color=PALETTE["teal_light"], corner_radius=0, height=55)
         h.pack(fill="x"); h.pack_propagate(False)
         ctk.CTkLabel(h, text="👤  Datos del Paciente",
                      font=ctk.CTkFont(family="Georgia", size=17, weight="bold"),
                      text_color=PALETTE["teal_dark"]).place(relx=0.5, rely=0.5, anchor="center")
-
         card = ctk.CTkFrame(win, fg_color=PALETTE["card"], corner_radius=16,
                             border_width=1, border_color=PALETTE["card_border"])
         card.pack(padx=22, pady=14, fill="both", expand=True)
-
         for label, val in [
             ("Nombre completo",  p.get("nombre_completo")),
             ("Documento",        p.get("documento_identidad")),
@@ -261,7 +218,6 @@ class PopupBuscarPaciente(ctk.CTkToplevel):
             ctk.CTkLabel(row, text=val or "—",
                          font=ctk.CTkFont(size=13),
                          text_color=PALETTE["text_soft"]).pack(side="left")
-
         ctk.CTkButton(win, text="Cerrar", height=38, width=140, corner_radius=19,
                       fg_color=PALETTE["teal"], hover_color=PALETTE["teal_dark"],
                       text_color="white", command=win.destroy).pack(pady=10)
@@ -270,17 +226,14 @@ class PopupBuscarPaciente(ctk.CTkToplevel):
         win = ctk.CTkToplevel(self)
         win.title("Editar Paciente"); win.geometry("490x490")
         win.configure(fg_color=PALETTE["bg"]); win.grab_set()
-
         h = ctk.CTkFrame(win, fg_color=PALETTE["rose_light"], corner_radius=0, height=55)
         h.pack(fill="x"); h.pack_propagate(False)
         ctk.CTkLabel(h, text="✏️  Editar Paciente",
                      font=ctk.CTkFont(family="Georgia", size=17, weight="bold"),
                      text_color=PALETTE["rose_dark"]).place(relx=0.5, rely=0.5, anchor="center")
-
         card = ctk.CTkFrame(win, fg_color=PALETTE["card"], corner_radius=16,
                             border_width=1, border_color=PALETTE["card_border"])
         card.pack(padx=22, pady=12, fill="both", expand=True)
-
         campos = [
             ("Nombre completo",    "nombre_completo"),
             ("Documento",          "documento_identidad"),
@@ -337,13 +290,11 @@ class PopupBuscarPaciente(ctk.CTkToplevel):
         win = ctk.CTkToplevel(self)
         win.title("Historial"); win.geometry("500x340")
         win.configure(fg_color=PALETTE["bg"]); win.grab_set()
-
         h = ctk.CTkFrame(win, fg_color="#EDE8F8", corner_radius=0, height=55)
         h.pack(fill="x"); h.pack_propagate(False)
         ctk.CTkLabel(h, text=f"📋  Historial — {p.get('nombre_completo','')}",
                      font=ctk.CTkFont(family="Georgia", size=16, weight="bold"),
                      text_color=PALETTE["lavender"]).place(relx=0.5, rely=0.5, anchor="center")
-
         card = ctk.CTkFrame(win, fg_color=PALETTE["card"], corner_radius=16,
                             border_width=1, border_color=PALETTE["card_border"])
         card.pack(padx=22, pady=14, fill="both", expand=True)
@@ -351,7 +302,6 @@ class PopupBuscarPaciente(ctk.CTkToplevel):
                      text="🚧\n\nEl módulo de historial y citas\nestará disponible próximamente.",
                      font=ctk.CTkFont(size=15), text_color=PALETTE["text_light"]
                      ).place(relx=0.5, rely=0.5, anchor="center")
-
         ctk.CTkButton(win, text="Cerrar", height=36, width=120, corner_radius=18,
                       fg_color=PALETTE["lavender"], hover_color=PALETTE["teal"],
                       text_color="white", command=win.destroy).pack(pady=8)
@@ -365,11 +315,12 @@ class AppKalico(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.title("KALICO — Gestión Psicológica")
-        self.geometry("1100x760")
+        # Ventana más alta para acomodar la cuadrícula 3x3 cómodamente
+        self.geometry("1100x820")
+        self.minsize(1000, 780)
         self.configure(fg_color=PALETTE["bg"])
         self.resizable(True, True)
 
-        # Para compatibilidad con PopupBuscarPaciente
         self.accent_color = PALETTE["teal"]
         self.card_color   = PALETTE["card"]
         self.text_color   = PALETTE["text"]
@@ -379,154 +330,200 @@ class AppKalico(ctk.CTk):
         self.ruta_logo     = os.path.join(self.base_dir, "Imagen", "marcaDeAgua.jpeg")
         self.ruta_foto_dra = os.path.join(self.base_dir, "Imagen", "doctora.jpeg")
 
-        self.main_frame = ctk.CTkFrame(self, fg_color=PALETTE["bg"], corner_radius=0)
+        # Contenedor raíz fijo
+        self._root_frame = ctk.CTkFrame(self, fg_color=PALETTE["bg"], corner_radius=0)
+        self._root_frame.pack(fill="both", expand=True)
+
+        # Área scrollable — todo el contenido vive aquí
+        self._scroll_container = ctk.CTkScrollableFrame(
+            self._root_frame,
+            fg_color=PALETTE["bg"],
+            corner_radius=0,
+            scrollbar_button_color=PALETTE["teal_light"],
+            scrollbar_button_hover_color=PALETTE["teal"],
+        )
+        self._scroll_container.pack(fill="both", expand=True)
+
+        # main_frame dentro del scroll
+        self.main_frame = ctk.CTkFrame(
+            self._scroll_container, fg_color=PALETTE["bg"], corner_radius=0
+        )
         self.main_frame.pack(fill="both", expand=True)
 
         self.mostrar_menu_principal()
-
-    # ── Utilidades ────────────────────────────────────────
 
     def limpiar_pantalla(self):
         for w in self.main_frame.winfo_children():
             w.destroy()
 
-    # ── Menú principal ────────────────────────────────────
+    # ────────────────────────────────────────────────────
+    #  MENÚ PRINCIPAL
+    # ────────────────────────────────────────────────────
 
     def mostrar_menu_principal(self):
         self.limpiar_pantalla()
 
-        # ── Franja superior decorativa con gradiente simulado ──
+        # ── Header con logo CENTRADO y protagonismo ──────
         top_band = ctk.CTkFrame(self.main_frame, fg_color=PALETTE["teal_light"],
-                                corner_radius=0, height=90)
+                                corner_radius=0, height=130)
         top_band.pack(fill="x")
         top_band.pack_propagate(False)
 
-        # Línea decorativa inferior de la franja
-        accent_line = ctk.CTkFrame(self.main_frame, fg_color=PALETTE["rose"],
-                                   corner_radius=0, height=4)
-        accent_line.pack(fill="x")
+        # Decoraciones florales a los lados
+        ctk.CTkLabel(top_band, text="✿  ✦  ✿",
+                     font=ctk.CTkFont(size=16),
+                     text_color=PALETTE["rose"]).place(x=24, rely=0.5, anchor="w")
+        ctk.CTkLabel(top_band, text="✿  ✦  ✿",
+                     font=ctk.CTkFont(size=16),
+                     text_color=PALETTE["rose"]).place(relx=0.98, rely=0.5, anchor="e")
 
-        # Logo + nombre KALICO en la franja
-        logo_area = ctk.CTkFrame(top_band, fg_color="transparent")
-        logo_area.place(x=28, rely=0.5, anchor="w")
+        # Bloque central: logo + KALICO + subtítulo
+        center_header = ctk.CTkFrame(top_band, fg_color="transparent")
+        center_header.place(relx=0.5, rely=0.5, anchor="center")
 
         if os.path.exists(self.ruta_logo):
             img = Image.open(self.ruta_logo)
-            img_circ = make_circle_image(img, (72, 72),
-                                         border_color_hex=PALETTE["white"], border_width=3)
-            self.logo_img = ctk.CTkImage(light_image=img_circ, size=(72, 72))
-            ctk.CTkLabel(logo_area, image=self.logo_img, text="").pack(side="left", padx=(0, 12))
+            img_circ = make_circle_image(img, (100, 100),
+                                         border_color_hex=PALETTE["white"], border_width=4)
+            self.logo_img = ctk.CTkImage(light_image=img_circ, size=(100, 100))
+            ctk.CTkLabel(center_header, image=self.logo_img, text="").pack(side="left", padx=(0, 18))
 
-        # KALICO con estilo premium
-        kalico_frame = ctk.CTkFrame(logo_area, fg_color="transparent")
-        kalico_frame.pack(side="left")
-        ctk.CTkLabel(kalico_frame, text="KALICO",
-                     font=ctk.CTkFont(family="Georgia", size=28, weight="bold"),
+        texto_header = ctk.CTkFrame(center_header, fg_color="transparent")
+        texto_header.pack(side="left")
+        ctk.CTkLabel(texto_header, text="KALICO",
+                     font=ctk.CTkFont(family="Georgia", size=38, weight="bold"),
                      text_color=PALETTE["teal_dark"]).pack(anchor="w")
-        ctk.CTkLabel(kalico_frame, text="Gestión Psicológica",
-                     font=ctk.CTkFont(size=11),
+        ctk.CTkLabel(texto_header, text="Gestión Psicológica",
+                     font=ctk.CTkFont(size=14),
                      text_color=PALETTE["text_soft"]).pack(anchor="w")
 
-        # Decoración floral derecha (caracteres unicode)
-        ctk.CTkLabel(top_band, text="✿  ✦  ✿",
-                     font=ctk.CTkFont(size=18),
-                     text_color=PALETTE["rose"]).place(relx=0.98, rely=0.5,
-                                                       anchor="e")
+        # Línea decorativa rosa
+        ctk.CTkFrame(self.main_frame, fg_color=PALETTE["rose"],
+                     corner_radius=0, height=4).pack(fill="x")
 
-        # ── Foto doctora con anillo decorativo ──
-        photo_outer = ctk.CTkFrame(self.main_frame, fg_color=PALETTE["rose_light"],
-                                   width=176, height=176, corner_radius=88)
-        photo_outer.pack(pady=(32, 0))
-        photo_outer.pack_propagate(False)
+        # ── Foto doctora + saludo (compacto) ────────────
+        center_block = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        center_block.pack(pady=(16, 4))
 
-        photo_mid = ctk.CTkFrame(photo_outer, fg_color=PALETTE["gold"],
-                                 width=162, height=162, corner_radius=81)
-        photo_mid.place(relx=0.5, rely=0.5, anchor="center")
-        photo_mid.pack_propagate(False)
-
-        size = (152, 152)
+        # Foto circular limpia con borde teal suave (sin fondo dorado)
+        size = (128, 128)
         if os.path.exists(self.ruta_foto_dra):
             img_dra = Image.open(self.ruta_foto_dra)
-            img_circ = make_circle_image(img_dra, size)
+            img_circ = make_circle_image(img_dra, size,
+                                         border_color_hex=PALETTE["teal"], border_width=4)
             self.foto_img = ctk.CTkImage(light_image=img_circ, size=size)
-            ctk.CTkLabel(photo_mid, image=self.foto_img, text="").place(
-                relx=0.5, rely=0.5, anchor="center")
+            ctk.CTkLabel(center_block, image=self.foto_img, text="",
+                         fg_color="transparent").pack(side="left", padx=(0, 20))
         else:
-            photo_mid.configure(fg_color=PALETTE["teal"])
-            ctk.CTkLabel(photo_mid, text="👤", font=("Arial", 58),
+            placeholder = ctk.CTkFrame(center_block, fg_color=PALETTE["teal"],
+                                       width=128, height=128, corner_radius=64)
+            placeholder.pack(side="left", padx=(0, 20))
+            placeholder.pack_propagate(False)
+            ctk.CTkLabel(placeholder, text="👤", font=("Arial", 48),
                          text_color="white").place(relx=0.5, rely=0.5, anchor="center")
 
-        # ── Saludo ──
-        ctk.CTkLabel(self.main_frame, text="¡Bienvenida, Dra. Karen!",
-                     font=ctk.CTkFont(family="Georgia", size=34, weight="bold"),
-                     text_color=PALETTE["text"]).pack(pady=(18, 4))
+        # Saludo al lado de la foto
+        saludo_frame = ctk.CTkFrame(center_block, fg_color="transparent")
+        saludo_frame.pack(side="left")
+        ctk.CTkLabel(saludo_frame, text="¡Bienvenida, Dra. Karen!",
+                     font=ctk.CTkFont(family="Georgia", size=30, weight="bold"),
+                     text_color=PALETTE["text"]).pack(anchor="w")
+        ctk.CTkLabel(saludo_frame, text="✦   Panel de Gestión Integral   ✦",
+                     font=ctk.CTkFont(size=13),
+                     text_color=PALETTE["rose_dark"]).pack(anchor="w", pady=(4, 0))
 
-        ctk.CTkLabel(self.main_frame,
-                     text="✦   ¿Qué gestionaremos hoy?   ✦",
-                     font=ctk.CTkFont(size=14),
-                     text_color=PALETTE["rose_dark"]).pack(pady=(0, 30))
+        # ── Cuadrícula 3 × 3 de tarjetas ────────────────
+        grid_outer = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        grid_outer.pack(pady=(12, 10))
 
-        # ── Tarjetas ──
-        cards_row = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        cards_row.pack(pady=6)
-
+        # 9 módulos en orden de la imagen de referencia
         tarjetas = [
-            ("Pacientes",    "👥", PALETTE["teal"],     PALETTE["teal_dark"],    self.click_pacientes),
-            ("Agenda",       "📅", PALETTE["rose"],     PALETTE["rose_dark"],    self.click_citas),
-            ("Historias",    "🧠", PALETTE["lavender"], "#A090D0",               self.click_historias),
-            ("Tratamientos", "💊", PALETTE["teal"],     PALETTE["teal_dark"],    self.click_tratamientos),
-            ("Notas",        "📝", PALETTE["rose"],     PALETTE["rose_dark"],    self.click_notas),
-            ("Pagos",        "💳", PALETTE["lavender"], "#A090D0",               self.click_pagos),
-            ("Progreso",     "📈", PALETTE["teal"],     PALETTE["teal_dark"],    self.click_progreso),
-            ("Recordatorios","🔔", PALETTE["rose"],     PALETTE["rose_dark"],    self.click_recordatorios),
-            ("Configuración","⚙️", PALETTE["lavender"], "#A090D0",               self.click_config),
-            ("Estadísticas", "📊", PALETTE["lavender"], "#A090D0",               self.click_stats),
-            ]
-        
-        for titulo, icono, color, hover, cmd in tarjetas:
-            self._crear_tarjeta(cards_row, titulo, icono, color, hover, cmd)
+            ("Pacientes",     "👥", PALETTE["teal"],     PALETTE["teal_dark"], self.click_pacientes),
+            ("Agenda",        "📅", PALETTE["rose"],     PALETTE["rose_dark"], self.click_citas),
+            ("Historias",     "🧠", PALETTE["lavender"], PALETTE["lav_dark"],  self.click_historias),
+            ("Tratamientos",  "💊", PALETTE["teal"],     PALETTE["teal_dark"], self.click_tratamientos),
+            ("Notas",         "📝", PALETTE["rose"],     PALETTE["rose_dark"], self.click_notas),
+            ("Pagos",         "💳", PALETTE["lavender"], PALETTE["lav_dark"],  self.click_pagos),
+            ("Progreso",      "📈", PALETTE["teal"],     PALETTE["teal_dark"], self.click_progreso),
+            ("Estadísticas",  "📊", PALETTE["rose"],     PALETTE["rose_dark"], self.click_stats),
+            ("Configuración", "⚙️", PALETTE["lavender"], PALETTE["lav_dark"],  self.click_config),
+        ]
 
-    def _crear_tarjeta(self, parent, titulo, icono, color, hover, cmd):
-        # Sombra simulada
+        for idx, (titulo, icono, color, hover, cmd) in enumerate(tarjetas):
+            fila  = idx // 3
+            col   = idx % 3
+            self._crear_tarjeta(grid_outer, titulo, icono, color, hover, cmd, fila, col)
+
+    # ── Tarjeta compacta ──────────────────────────────────
+
+    def _crear_tarjeta(self, parent, titulo, icono, color, hover, cmd, fila, col):
+        # Marco sombra
         shadow = ctk.CTkFrame(parent, fg_color=PALETTE["shadow"],
-                              width=246, height=304, corner_radius=26)
-        shadow.grid(row=0, column=len(parent.winfo_children()), padx=24, pady=10)
+                              width=298, height=170, corner_radius=20)
+        shadow.grid(row=fila, column=col, padx=14, pady=10)
         shadow.grid_propagate(False)
 
+        # Tarjeta principal
         card = ctk.CTkFrame(shadow, fg_color=PALETTE["card"],
-                            width=240, height=298, corner_radius=24,
+                            width=293, height=166, corner_radius=18,
                             border_width=1, border_color=PALETTE["card_border"])
         card.place(x=2, y=0)
         card.pack_propagate(False)
 
-        # Franja de color superior en tarjeta
-        top_strip = ctk.CTkFrame(card, fg_color=color, height=8, corner_radius=0)
-        top_strip.pack(fill="x", padx=0, pady=0)
+        # Layout horizontal: ícono izquierda | texto+botón derecha
+        inner = ctk.CTkFrame(card, fg_color="transparent")
+        inner.pack(fill="both", expand=True, padx=14, pady=12)
 
-        # Círculo del ícono (colores pastel sólidos, tkinter no soporta hex con alpha)
-        icon_bg = ctk.CTkFrame(card, fg_color=PALETTE["bg2"],
-                               width=90, height=90, corner_radius=45)
-        icon_bg.pack(pady=(28, 4))
-        icon_bg.pack_propagate(False)
-        ctk.CTkLabel(icon_bg, text=icono,
-                     font=ctk.CTkFont(size=42)).place(relx=0.5, rely=0.5, anchor="center")
+        # Círculo del ícono
+        icon_frame = ctk.CTkFrame(inner, fg_color=PALETTE["bg2"],
+                                  width=72, height=72, corner_radius=36)
+        icon_frame.pack(side="left", padx=(0, 14))
+        icon_frame.pack_propagate(False)
 
-        ctk.CTkLabel(card, text=titulo,
-                     font=ctk.CTkFont(family="Georgia", size=21, weight="bold"),
-                     text_color=PALETTE["text"]).pack(pady=(8, 4))
+        # Franja de color en el borde izquierdo del ícono
+        ctk.CTkFrame(icon_frame, fg_color=color, width=5, height=72,
+                     corner_radius=3).place(x=0, y=0)
 
-        ctk.CTkLabel(card, text="─────",
+        ctk.CTkLabel(icon_frame, text=icono,
+                     font=ctk.CTkFont(size=34)).place(relx=0.55, rely=0.5, anchor="center")
+
+        # Texto y botón
+        text_col = ctk.CTkFrame(inner, fg_color="transparent")
+        text_col.pack(side="left", fill="both", expand=True)
+
+        ctk.CTkLabel(text_col, text=titulo,
+                     font=ctk.CTkFont(family="Georgia", size=17, weight="bold"),
+                     text_color=PALETTE["text"],
+                     anchor="w").pack(anchor="w", pady=(6, 2))
+
+        ctk.CTkLabel(text_col, text="─────",
                      text_color=color,
-                     font=ctk.CTkFont(size=10)).pack()
+                     font=ctk.CTkFont(size=9)).pack(anchor="w")
 
-        ctk.CTkButton(card, text="Ingresar  →",
+        ctk.CTkButton(text_col, text="Ingresar  →",
                       fg_color=color, hover_color=hover,
                       text_color="white",
-                      font=ctk.CTkFont(size=14, weight="bold"),
-                      height=38, width=165, corner_radius=19,
-                      command=cmd).pack(pady=(14, 0))
+                      font=ctk.CTkFont(size=13, weight="bold"),
+                      height=32, width=140, corner_radius=16,
+                      command=cmd).pack(anchor="w", pady=(8, 0))
 
-    # ── Módulo Pacientes ──────────────────────────────────
+    # ── Header secundario ────────────────────────────────
+
+    def _header_secundario(self, titulo, bg, fg):
+        band = ctk.CTkFrame(self.main_frame, fg_color=bg, height=64, corner_radius=0)
+        band.pack(fill="x")
+        band.pack_propagate(False)
+        ctk.CTkButton(band, text="←  Volver",
+                      fg_color="transparent", hover_color=PALETTE["card_border"],
+                      text_color=fg, font=ctk.CTkFont(size=13),
+                      command=self.mostrar_menu_principal).place(x=16, rely=0.5, anchor="w")
+        ctk.CTkLabel(band, text=titulo,
+                     font=ctk.CTkFont(family="Georgia", size=20, weight="bold"),
+                     text_color=fg).place(relx=0.5, rely=0.5, anchor="center")
+        ctk.CTkFrame(self.main_frame, fg_color=PALETTE["rose"],
+                     height=3, corner_radius=0).pack(fill="x")
+
+    # ── Módulo Pacientes ─────────────────────────────────
 
     def click_pacientes(self):
         self.limpiar_pantalla()
@@ -535,13 +532,11 @@ class AppKalico(ctk.CTk):
 
         btn_row = ctk.CTkFrame(self.main_frame, fg_color="transparent")
         btn_row.pack(pady=14)
-
         ctk.CTkButton(btn_row, text="➕  Registrar paciente",
                       fg_color=PALETTE["teal"], hover_color=PALETTE["teal_dark"],
                       text_color="white", height=42, width=240, corner_radius=21,
                       font=ctk.CTkFont(size=14, weight="bold"),
                       command=self._mostrar_form_registro).pack(side="left", padx=10)
-
         ctk.CTkButton(btn_row, text="🔍  Buscar paciente",
                       fg_color=PALETTE["rose"], hover_color=PALETTE["rose_dark"],
                       text_color="white", height=42, width=220, corner_radius=21,
@@ -552,36 +547,16 @@ class AppKalico(ctk.CTk):
         self.form_container.pack(fill="both", expand=True)
         self._mostrar_form_registro()
 
-    def _header_secundario(self, titulo, bg, fg):
-        band = ctk.CTkFrame(self.main_frame, fg_color=bg, height=64, corner_radius=0)
-        band.pack(fill="x")
-        band.pack_propagate(False)
-
-        ctk.CTkButton(band, text="←  Volver",
-                      fg_color="transparent", hover_color=PALETTE["card_border"],
-                      text_color=fg, font=ctk.CTkFont(size=13),
-                      command=self.mostrar_menu_principal).place(x=16, rely=0.5, anchor="w")
-
-        ctk.CTkLabel(band, text=titulo,
-                     font=ctk.CTkFont(family="Georgia", size=20, weight="bold"),
-                     text_color=fg).place(relx=0.5, rely=0.5, anchor="center")
-
-        # Línea decorativa
-        ctk.CTkFrame(self.main_frame, fg_color=PALETTE["rose"],
-                     height=3, corner_radius=0).pack(fill="x")
-
     def _abrir_busqueda(self):
         PopupBuscarPaciente(self)
 
     def _mostrar_form_registro(self):
         for w in self.form_container.winfo_children():
             w.destroy()
-
         card = ctk.CTkFrame(self.form_container, fg_color=PALETTE["card"],
                             corner_radius=20, border_width=1,
                             border_color=PALETTE["card_border"])
         card.pack(pady=10, padx=50, fill="both", expand=True)
-
         ctk.CTkLabel(card, text="Nuevo Paciente",
                      font=ctk.CTkFont(family="Georgia", size=16, weight="bold"),
                      text_color=PALETTE["teal_dark"]).grid(
@@ -641,29 +616,23 @@ class AppKalico(ctk.CTk):
         except Exception as e:
             messagebox.showerror("Error", str(e))
 
+    # ── Módulo Agenda ────────────────────────────────────
+
     def click_citas(self):
         self.limpiar_pantalla()
-        self._header_secundario(
-            "📅 Agenda de Citas",
-            PALETTE["rose_light"],
-            PALETTE["rose_dark"]
-        )
+        self._header_secundario("📅  Agenda de Citas",
+                                PALETTE["rose_light"], PALETTE["rose_dark"])
 
         container = ctk.CTkFrame(self.main_frame, fg_color="transparent")
         container.pack(fill="both", expand=True, padx=40, pady=20)
 
-        # Selector de paciente
-        ctk.CTkLabel(
-            container,
-            text="Seleccionar paciente",
-            font=ctk.CTkFont(size=14),
-            text_color=PALETTE["text"]
-        ).pack(anchor="w")
+        ctk.CTkLabel(container, text="Seleccionar paciente",
+                     font=ctk.CTkFont(size=14),
+                     text_color=PALETTE["text"]).pack(anchor="w")
 
         self.combo_pacientes = ctk.CTkComboBox(container, width=320)
         self.combo_pacientes.pack(pady=8)
 
-        # Cargar pacientes
         try:
             res = supabase.table("pacientes").select("id,nombre_completo").execute()
             self.pacientes_data = res.data or []
@@ -672,105 +641,73 @@ class AppKalico(ctk.CTk):
         except Exception as e:
             messagebox.showerror("Error", str(e))
 
-        # Fecha
-        self.entry_fecha_cita = ctk.CTkEntry(
-            container,
-            placeholder_text="Fecha (AAAA-MM-DD)",
-            width=320
-        )
+        self.entry_fecha_cita = ctk.CTkEntry(container,
+                                             placeholder_text="Fecha (AAAA-MM-DD)", width=320)
         self.entry_fecha_cita.pack(pady=6)
 
-        # Hora
-        self.entry_hora_cita = ctk.CTkEntry(
-            container,
-            placeholder_text="Hora (HH:MM)",
-            width=320
-        )
+        self.entry_hora_cita = ctk.CTkEntry(container,
+                                            placeholder_text="Hora (HH:MM)", width=320)
         self.entry_hora_cita.pack(pady=6)
 
-        # FUNCIÓN INTERNA
         def guardar_cita():
             nombre = self.combo_pacientes.get()
-            fecha = self.entry_fecha_cita.get()
-            hora = self.entry_hora_cita.get()
-
+            fecha  = self.entry_fecha_cita.get()
+            hora   = self.entry_hora_cita.get()
             if not nombre or not fecha or not hora:
-                messagebox.showwarning("Atención", "Completa todos los campos")
-                return
-
-            paciente = next(
-                (p for p in self.pacientes_data if p["nombre_completo"] == nombre),
-                None
-            )
-
+                messagebox.showwarning("Atención", "Completa todos los campos"); return
+            paciente = next((p for p in self.pacientes_data
+                             if p["nombre_completo"] == nombre), None)
             if not paciente:
-                messagebox.showwarning("Error", "Paciente no válido")
-                return
-
+                messagebox.showwarning("Error", "Paciente no válido"); return
             try:
                 supabase.table("citas").insert({
                     "paciente_id": paciente["id"],
-                    "fecha": fecha,
-                    "hora": hora
+                    "fecha": fecha, "hora": hora
                 }).execute()
-
                 messagebox.showinfo("Éxito", "Cita agendada correctamente")
-
             except Exception as e:
                 messagebox.showerror("Error", str(e))
 
-        # BOTÓN
-        ctk.CTkButton(
-            container,
-            text="Agendar cita",
-            fg_color=PALETTE["rose"],
-            hover_color=PALETTE["rose_dark"],
-            text_color="white",
-            command=guardar_cita
-        ).pack(pady=12)
-     # ─────────────────────────────────────────────
-    # NUEVOS MÓDULOS
-    # ─────────────────────────────────────────────
+        ctk.CTkButton(container, text="Agendar cita",
+                      fg_color=PALETTE["rose"], hover_color=PALETTE["rose_dark"],
+                      text_color="white", command=guardar_cita).pack(pady=12)
 
-    def _modulo_generico(self, titulo):
+    # ── Módulos genéricos (en desarrollo) ────────────────
+
+    def _modulo_generico(self, titulo, bg=None, fg=None):
         self.limpiar_pantalla()
-        self._header_secundario(
-            titulo,
-            PALETTE["teal_light"],
-            PALETTE["teal_dark"]
-        )
-
-        ctk.CTkLabel(
-            self.main_frame,
-            text="🚧 Módulo en desarrollo",
-            font=ctk.CTkFont(size=18),
-            text_color=PALETTE["text"]
-        ).pack(pady=50)
-
+        bg = bg or PALETTE["teal_light"]
+        fg = fg or PALETTE["teal_dark"]
+        self._header_secundario(titulo, bg, fg)
+        ctk.CTkLabel(self.main_frame,
+                     text="🚧\n\nMódulo en desarrollo.\nEstarà disponible próximamente.",
+                     font=ctk.CTkFont(size=18),
+                     text_color=PALETTE["text_soft"]).pack(pady=80)
 
     def click_historias(self):
-        self._modulo_generico("🧠 Historias Clínicas")
+        self._modulo_generico("🧠  Historias Clínicas", "#EDE8F8", PALETTE["lav_dark"])
 
     def click_tratamientos(self):
-        self._modulo_generico("💊 Tratamientos")
+        self._modulo_generico("💊  Tratamientos", PALETTE["teal_light"], PALETTE["teal_dark"])
 
     def click_notas(self):
-        self._modulo_generico("📝 Notas de Sesión")
+        self._modulo_generico("📝  Notas de Sesión", PALETTE["rose_light"], PALETTE["rose_dark"])
 
     def click_pagos(self):
-        self._modulo_generico("💳 Pagos / Facturación")
+        self._modulo_generico("💳  Pagos / Facturación", "#EDE8F8", PALETTE["lav_dark"])
 
     def click_progreso(self):
-        self._modulo_generico("📈 Progreso del Paciente")
+        self._modulo_generico("📈  Progreso del Paciente", PALETTE["teal_light"], PALETTE["teal_dark"])
 
     def click_recordatorios(self):
-        self._modulo_generico("🔔 Recordatorios")
+        self._modulo_generico("🔔  Recordatorios", PALETTE["rose_light"], PALETTE["rose_dark"])
 
     def click_config(self):
-        self._modulo_generico("⚙️ Configuración")
-    
+        self._modulo_generico("⚙️  Configuración", "#EDE8F8", PALETTE["lav_dark"])
+
     def click_stats(self):
-        self._modulo_generico("📊 Estadísticas")
+        self._modulo_generico("📊  Estadísticas", PALETTE["rose_light"], PALETTE["rose_dark"])
+
 
 if __name__ == "__main__":
     app = AppKalico()
