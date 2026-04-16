@@ -705,7 +705,7 @@ class AppKalico(ctk.CTk):
     def click_config(self):
         self._modulo_generico("⚙️  Configuración", "#EDE8F8", PALETTE["lav_dark"])
 
-    def click_stats(self):
+    def click_stats(self): 
         self._modulo_generico("📊  Estadísticas", PALETTE["rose_light"], PALETTE["rose_dark"])
 
 
