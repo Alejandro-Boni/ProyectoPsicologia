@@ -1,4 +1,5 @@
 import os
+from tkcalendar import Calendar
 from datetime import datetime
 from tkinter import messagebox
 import tkinter as tk
@@ -616,62 +617,61 @@ class AppKalico(ctk.CTk):
         except Exception as e:
             messagebox.showerror("Error", str(e))
 
-    # ── Módulo Agenda ────────────────────────────────────
 
+   # --- Módulo Agenda (Versión con Calendario Visual) ---
     def click_citas(self):
         self.limpiar_pantalla()
-        self._header_secundario("📅  Agenda de Citas",
+        self._header_secundario("📅  Agenda de Citas", 
                                 PALETTE["rose_light"], PALETTE["rose_dark"])
 
-        container = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        container.pack(fill="both", expand=True, padx=40, pady=20)
+        # Contenedor para organizar Izquierda (Calendario) y Derecha (Datos)
+        cuerpo_agenda = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        cuerpo_agenda.pack(fill="both", expand=True, padx=40, pady=20)
 
-        ctk.CTkLabel(container, text="Seleccionar paciente",
-                     font=ctk.CTkFont(size=14),
-                     text_color=PALETTE["text"]).pack(anchor="w")
+        # --- LADO IZQUIERDO: CALENDARIO ---
+        frame_izq = ctk.CTkFrame(cuerpo_agenda, fg_color=PALETTE["card"], corner_radius=20)
+        frame_izq.pack(side="left", fill="both", expand=True, padx=(0, 20))
 
-        self.combo_pacientes = ctk.CTkComboBox(container, width=320)
-        self.combo_pacientes.pack(pady=8)
+        ctk.CTkLabel(frame_izq, text="Seleccione el día", 
+                     font=ctk.CTkFont(size=16, weight="bold")).pack(pady=10)
 
+        # Aquí es donde fallaba antes por el Import
+        self.cal = Calendar(frame_izq, selectmode='day', locale='es_ES',
+                            background=PALETTE["rose"], headersbackground=PALETTE["rose_dark"],
+                            selectbackground=PALETTE["teal"], normalbackground="white")
+        self.cal.pack(padx=20, pady=10, fill="both", expand=True)
+
+        # --- LADO DERECHO: FORMULARIO ---
+        frame_der = ctk.CTkFrame(cuerpo_agenda, fg_color=PALETTE["card"], width=350, corner_radius=20)
+        frame_der.pack(side="right", fill="y")
+        frame_der.pack_propagate(False) # Mantiene el ancho de 350
+
+        ctk.CTkLabel(frame_der, text="Detalles del Agendamiento", 
+                     font=ctk.CTkFont(size=16, weight="bold"),
+                     text_color=PALETTE["rose_dark"]).pack(pady=20)
+
+        # Selector de Paciente
+        ctk.CTkLabel(frame_der, text="Paciente:", text_color=PALETTE["text_soft"]).pack(anchor="w", padx=25)
+        self.combo_pacientes = ctk.CTkComboBox(frame_der, width=300, corner_radius=15)
+        self.combo_pacientes.pack(pady=(5, 15), padx=25)
+        
+        # Cargar pacientes (Tu lógica de Supabase)
         try:
             res = supabase.table("pacientes").select("id,nombre_completo").execute()
             self.pacientes_data = res.data or []
-            nombres = [p["nombre_completo"] for p in self.pacientes_data]
-            self.combo_pacientes.configure(values=nombres)
-        except Exception as e:
-            messagebox.showerror("Error", str(e))
+            self.combo_pacientes.configure(values=[p["nombre_completo"] for p in self.pacientes_data])
+        except: pass
 
-        self.entry_fecha_cita = ctk.CTkEntry(container,
-                                             placeholder_text="Fecha (AAAA-MM-DD)", width=320)
-        self.entry_fecha_cita.pack(pady=6)
+        # Campo de Hora
+        ctk.CTkLabel(frame_der, text="Hora (HH:MM):", text_color=PALETTE["text_soft"]).pack(anchor="w", padx=25)
+        self.entry_hora_cita = ctk.CTkEntry(frame_der, placeholder_text="Ej: 10:00 AM", width=300)
+        self.entry_hora_cita.pack(pady=(5, 20), padx=25)
 
-        self.entry_hora_cita = ctk.CTkEntry(container,
-                                            placeholder_text="Hora (HH:MM)", width=320)
-        self.entry_hora_cita.pack(pady=6)
-
-        def guardar_cita():
-            nombre = self.combo_pacientes.get()
-            fecha  = self.entry_fecha_cita.get()
-            hora   = self.entry_hora_cita.get()
-            if not nombre or not fecha or not hora:
-                messagebox.showwarning("Atención", "Completa todos los campos"); return
-            paciente = next((p for p in self.pacientes_data
-                             if p["nombre_completo"] == nombre), None)
-            if not paciente:
-                messagebox.showwarning("Error", "Paciente no válido"); return
-            try:
-                supabase.table("citas").insert({
-                    "paciente_id": paciente["id"],
-                    "fecha": fecha, "hora": hora
-                }).execute()
-                messagebox.showinfo("Éxito", "Cita agendada correctamente")
-            except Exception as e:
-                messagebox.showerror("Error", str(e))
-
-        ctk.CTkButton(container, text="Agendar cita",
+        # Botón Final
+        ctk.CTkButton(frame_der, text="Agendar Cita", 
                       fg_color=PALETTE["rose"], hover_color=PALETTE["rose_dark"],
-                      text_color="white", command=guardar_cita).pack(pady=12)
-
+                      height=40, corner_radius=20,
+                      command=self.guardar_cita).pack(pady=20, padx=25)
     # ── Módulos genéricos (en desarrollo) ────────────────
 
     def _modulo_generico(self, titulo, bg=None, fg=None):
