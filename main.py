@@ -1,5 +1,5 @@
 import os
-from tkcalendar import Calendar
+import re
 from datetime import datetime
 from tkinter import messagebox
 import tkinter as tk
@@ -178,9 +178,9 @@ class PopupBuscarPaciente(ctk.CTkToplevel):
         acc.pack(side="left", padx=4)
 
         btn_cfg = [
-            ("👁", PALETTE["teal_light"], PALETTE["teal"],     self._ver),
+            ("👁", PALETTE["teal_light"], PALETTE["teal"],      self._ver),
             ("✏️", PALETTE["rose_light"], PALETTE["rose_dark"], self._editar),
-            ("🗑", "#FADADD",             "#E88080",            self._eliminar),
+            ("🗑", "#FADADD",             "#E88080",             self._eliminar),
             ("📋", "#EDE8F8",             PALETTE["lavender"],  self._historial),
         ]
         for emoji, bg, hover, fn in btn_cfg:
@@ -316,7 +316,6 @@ class AppKalico(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.title("KALICO — Gestión Psicológica")
-        # Ventana más alta para acomodar la cuadrícula 3x3 cómodamente
         self.geometry("1100x820")
         self.minsize(1000, 780)
         self.configure(fg_color=PALETTE["bg"])
@@ -331,11 +330,10 @@ class AppKalico(ctk.CTk):
         self.ruta_logo     = os.path.join(self.base_dir, "Imagen", "marcaDeAgua.jpeg")
         self.ruta_foto_dra = os.path.join(self.base_dir, "Imagen", "doctora.jpeg")
 
-        # Contenedor raíz fijo
+        # ── Estructura con scroll para pantallas pequeñas ──
         self._root_frame = ctk.CTkFrame(self, fg_color=PALETTE["bg"], corner_radius=0)
         self._root_frame.pack(fill="both", expand=True)
 
-        # Área scrollable — todo el contenido vive aquí
         self._scroll_container = ctk.CTkScrollableFrame(
             self._root_frame,
             fg_color=PALETTE["bg"],
@@ -345,7 +343,6 @@ class AppKalico(ctk.CTk):
         )
         self._scroll_container.pack(fill="both", expand=True)
 
-        # main_frame dentro del scroll
         self.main_frame = ctk.CTkFrame(
             self._scroll_container, fg_color=PALETTE["bg"], corner_radius=0
         )
@@ -402,11 +399,11 @@ class AppKalico(ctk.CTk):
         ctk.CTkFrame(self.main_frame, fg_color=PALETTE["rose"],
                      corner_radius=0, height=4).pack(fill="x")
 
-        # ── Foto doctora + saludo (compacto) ────────────
+        # ── Foto doctora + saludo ────────────────────────
         center_block = ctk.CTkFrame(self.main_frame, fg_color="transparent")
         center_block.pack(pady=(16, 4))
 
-        # Foto circular limpia con borde teal suave (sin fondo dorado)
+        # Foto circular limpia con borde teal (sin fondo dorado)
         size = (128, 128)
         if os.path.exists(self.ruta_foto_dra):
             img_dra = Image.open(self.ruta_foto_dra)
@@ -423,7 +420,6 @@ class AppKalico(ctk.CTk):
             ctk.CTkLabel(placeholder, text="👤", font=("Arial", 48),
                          text_color="white").place(relx=0.5, rely=0.5, anchor="center")
 
-        # Saludo al lado de la foto
         saludo_frame = ctk.CTkFrame(center_block, fg_color="transparent")
         saludo_frame.pack(side="left")
         ctk.CTkLabel(saludo_frame, text="¡Bienvenida, Dra. Karen!",
@@ -433,11 +429,10 @@ class AppKalico(ctk.CTk):
                      font=ctk.CTkFont(size=13),
                      text_color=PALETTE["rose_dark"]).pack(anchor="w", pady=(4, 0))
 
-        # ── Cuadrícula 3 × 3 de tarjetas ────────────────
+        # ── Cuadrícula 3×3 de tarjetas ───────────────────
         grid_outer = ctk.CTkFrame(self.main_frame, fg_color="transparent")
         grid_outer.pack(pady=(12, 10))
 
-        # 9 módulos en orden de la imagen de referencia
         tarjetas = [
             ("Pacientes",     "👥", PALETTE["teal"],     PALETTE["teal_dark"], self.click_pacientes),
             ("Agenda",        "📅", PALETTE["rose"],     PALETTE["rose_dark"], self.click_citas),
@@ -451,59 +446,44 @@ class AppKalico(ctk.CTk):
         ]
 
         for idx, (titulo, icono, color, hover, cmd) in enumerate(tarjetas):
-            fila  = idx // 3
-            col   = idx % 3
-            self._crear_tarjeta(grid_outer, titulo, icono, color, hover, cmd, fila, col)
+            self._crear_tarjeta(grid_outer, titulo, icono, color, hover, cmd,
+                                idx // 3, idx % 3)
 
-    # ── Tarjeta compacta ──────────────────────────────────
+    # ── Tarjeta compacta ─────────────────────────────────
 
     def _crear_tarjeta(self, parent, titulo, icono, color, hover, cmd, fila, col):
-        # Marco sombra
         shadow = ctk.CTkFrame(parent, fg_color=PALETTE["shadow"],
                               width=298, height=170, corner_radius=20)
         shadow.grid(row=fila, column=col, padx=14, pady=10)
         shadow.grid_propagate(False)
 
-        # Tarjeta principal
         card = ctk.CTkFrame(shadow, fg_color=PALETTE["card"],
                             width=293, height=166, corner_radius=18,
                             border_width=1, border_color=PALETTE["card_border"])
         card.place(x=2, y=0)
         card.pack_propagate(False)
 
-        # Layout horizontal: ícono izquierda | texto+botón derecha
         inner = ctk.CTkFrame(card, fg_color="transparent")
         inner.pack(fill="both", expand=True, padx=14, pady=12)
 
-        # Círculo del ícono
         icon_frame = ctk.CTkFrame(inner, fg_color=PALETTE["bg2"],
                                   width=72, height=72, corner_radius=36)
         icon_frame.pack(side="left", padx=(0, 14))
         icon_frame.pack_propagate(False)
-
-        # Franja de color en el borde izquierdo del ícono
         ctk.CTkFrame(icon_frame, fg_color=color, width=5, height=72,
                      corner_radius=3).place(x=0, y=0)
-
         ctk.CTkLabel(icon_frame, text=icono,
                      font=ctk.CTkFont(size=34)).place(relx=0.55, rely=0.5, anchor="center")
 
-        # Texto y botón
         text_col = ctk.CTkFrame(inner, fg_color="transparent")
         text_col.pack(side="left", fill="both", expand=True)
-
         ctk.CTkLabel(text_col, text=titulo,
                      font=ctk.CTkFont(family="Georgia", size=17, weight="bold"),
-                     text_color=PALETTE["text"],
-                     anchor="w").pack(anchor="w", pady=(6, 2))
-
+                     text_color=PALETTE["text"], anchor="w").pack(anchor="w", pady=(6, 2))
         ctk.CTkLabel(text_col, text="─────",
-                     text_color=color,
-                     font=ctk.CTkFont(size=9)).pack(anchor="w")
-
+                     text_color=color, font=ctk.CTkFont(size=9)).pack(anchor="w")
         ctk.CTkButton(text_col, text="Ingresar  →",
-                      fg_color=color, hover_color=hover,
-                      text_color="white",
+                      fg_color=color, hover_color=hover, text_color="white",
                       font=ctk.CTkFont(size=13, weight="bold"),
                       height=32, width=140, corner_radius=16,
                       command=cmd).pack(anchor="w", pady=(8, 0))
@@ -530,7 +510,6 @@ class AppKalico(ctk.CTk):
         self.limpiar_pantalla()
         self._header_secundario("👥  Gestión de Pacientes",
                                 PALETTE["teal_light"], PALETTE["teal_dark"])
-
         btn_row = ctk.CTkFrame(self.main_frame, fg_color="transparent")
         btn_row.pack(pady=14)
         ctk.CTkButton(btn_row, text="➕  Registrar paciente",
@@ -543,7 +522,6 @@ class AppKalico(ctk.CTk):
                       text_color="white", height=42, width=220, corner_radius=21,
                       font=ctk.CTkFont(size=14, weight="bold"),
                       command=self._abrir_busqueda).pack(side="left", padx=10)
-
         self.form_container = ctk.CTkFrame(self.main_frame, fg_color="transparent")
         self.form_container.pack(fill="both", expand=True)
         self._mostrar_form_registro()
@@ -562,31 +540,25 @@ class AppKalico(ctk.CTk):
                      font=ctk.CTkFont(family="Georgia", size=16, weight="bold"),
                      text_color=PALETTE["teal_dark"]).grid(
             row=0, column=0, columnspan=2, pady=(16, 6), padx=30, sticky="w")
-
         self.entry_nombre    = self._campo(card, "Nombre Completo", 1, 0)
         self.entry_documento = self._campo(card, "Cédula / Documento", 2, 0)
         self.entry_fecha     = self._campo(card, "Fecha Nacimiento (AAAA-MM-DD)", 3, 0)
         self.entry_tel       = self._campo(card, "Teléfono", 1, 1)
         self.entry_email     = self._campo(card, "Email", 2, 1)
         self.entry_ocupacion = self._campo(card, "Ocupación", 3, 1)
-
-        ctk.CTkButton(self.form_container,
-                      text="✓  Confirmar y Guardar",
+        ctk.CTkButton(self.form_container, text="✓  Confirmar y Guardar",
                       fg_color=PALETTE["teal"], hover_color=PALETTE["teal_dark"],
                       text_color="white", height=46, width=280, corner_radius=23,
                       font=ctk.CTkFont(size=15, weight="bold"),
                       command=self.guardar_paciente).pack(pady=18)
 
     def _campo(self, parent, texto, fila, col):
-        ctk.CTkLabel(parent, text=texto,
-                     font=ctk.CTkFont(size=12),
+        ctk.CTkLabel(parent, text=texto, font=ctk.CTkFont(size=12),
                      text_color=PALETTE["text_soft"]).grid(
             row=fila*2-1, column=col, padx=30, pady=(12, 2), sticky="w")
         e = ctk.CTkEntry(parent, width=290, height=36, corner_radius=12,
-                         fg_color=PALETTE["bg2"],
-                         border_color=PALETTE["teal_light"],
-                         text_color=PALETTE["text"],
-                         font=ctk.CTkFont(size=13))
+                         fg_color=PALETTE["bg2"], border_color=PALETTE["teal_light"],
+                         text_color=PALETTE["text"], font=ctk.CTkFont(size=13))
         e.grid(row=fila*2, column=col, padx=30, pady=(0, 4), sticky="w")
         return e
 
@@ -617,62 +589,197 @@ class AppKalico(ctk.CTk):
         except Exception as e:
             messagebox.showerror("Error", str(e))
 
+    # ── Módulo Agenda (MEJORADO) ──────────────────────────
 
-   # --- Módulo Agenda (Versión con Calendario Visual) ---
     def click_citas(self):
         self.limpiar_pantalla()
-        self._header_secundario("📅  Agenda de Citas", 
+        self._header_secundario("📅  Agenda de Citas",
                                 PALETTE["rose_light"], PALETTE["rose_dark"])
 
-        # Contenedor para organizar Izquierda (Calendario) y Derecha (Datos)
         cuerpo_agenda = ctk.CTkFrame(self.main_frame, fg_color="transparent")
         cuerpo_agenda.pack(fill="both", expand=True, padx=40, pady=20)
 
-        # --- LADO IZQUIERDO: CALENDARIO ---
+        # ── IZQUIERDA: Calendario ────────────────────────
         frame_izq = ctk.CTkFrame(cuerpo_agenda, fg_color=PALETTE["card"], corner_radius=20)
         frame_izq.pack(side="left", fill="both", expand=True, padx=(0, 20))
 
-        ctk.CTkLabel(frame_izq, text="Seleccione el día", 
-                     font=ctk.CTkFont(size=16, weight="bold")).pack(pady=10)
+        ctk.CTkLabel(frame_izq, text="Seleccione el día",
+                     font=ctk.CTkFont(family="Georgia", size=16, weight="bold"),
+                     text_color=PALETTE["teal_dark"]).pack(pady=(18, 6))
 
-        # Aquí es donde fallaba antes por el Import
-        self.cal = Calendar(frame_izq, selectmode='day', locale='es_ES',
-                            background=PALETTE["rose"], headersbackground=PALETTE["rose_dark"],
-                            selectbackground=PALETTE["teal"], normalbackground="white")
+        # Calendario con fallback si es_ES no está instalado en Windows
+        try:
+            from tkcalendar import Calendar
+            self.cal = Calendar(
+                frame_izq, selectmode="day", locale="es_ES",
+                background=PALETTE["rose_light"],
+                headersbackground=PALETTE["rose_dark"],
+                headersforeground="white",
+                selectbackground=PALETTE["teal"],
+                selectforeground="white",
+                normalbackground="white",
+                weekendbackground=PALETTE["bg2"],
+                othermonthbackground=PALETTE["bg"],
+                font=("Georgia", 11),
+            )
+        except Exception:
+            from tkcalendar import Calendar
+            self.cal = Calendar(
+                frame_izq, selectmode="day",
+                background=PALETTE["rose_light"],
+                headersbackground=PALETTE["rose_dark"],
+                selectbackground=PALETTE["teal"],
+                normalbackground="white",
+            )
         self.cal.pack(padx=20, pady=10, fill="both", expand=True)
 
-        # --- LADO DERECHO: FORMULARIO ---
-        frame_der = ctk.CTkFrame(cuerpo_agenda, fg_color=PALETTE["card"], width=350, corner_radius=20)
+        # Lista de citas del día seleccionado
+        ctk.CTkLabel(frame_izq, text="Citas del día seleccionado:",
+                     font=ctk.CTkFont(size=13, weight="bold"),
+                     text_color=PALETTE["text_soft"]).pack(anchor="w", padx=20, pady=(10, 2))
+
+        self.frame_citas_dia = ctk.CTkScrollableFrame(
+            frame_izq, fg_color=PALETTE["bg2"], corner_radius=12, height=130
+        )
+        self.frame_citas_dia.pack(fill="x", padx=20, pady=(0, 14))
+
+        self.cal.bind("<<CalendarSelected>>", lambda e: self._cargar_citas_dia())
+        self._cargar_citas_dia()
+
+        # ── DERECHA: Formulario ───────────────────────────
+        frame_der = ctk.CTkFrame(cuerpo_agenda, fg_color=PALETTE["card"],
+                                 width=350, corner_radius=20)
         frame_der.pack(side="right", fill="y")
-        frame_der.pack_propagate(False) # Mantiene el ancho de 350
+        frame_der.pack_propagate(False)
 
-        ctk.CTkLabel(frame_der, text="Detalles del Agendamiento", 
-                     font=ctk.CTkFont(size=16, weight="bold"),
-                     text_color=PALETTE["rose_dark"]).pack(pady=20)
+        ctk.CTkLabel(frame_der, text="Detalles del Agendamiento",
+                     font=ctk.CTkFont(family="Georgia", size=16, weight="bold"),
+                     text_color=PALETTE["rose_dark"]).pack(pady=(22, 10))
 
-        # Selector de Paciente
-        ctk.CTkLabel(frame_der, text="Paciente:", text_color=PALETTE["text_soft"]).pack(anchor="w", padx=25)
-        self.combo_pacientes = ctk.CTkComboBox(frame_der, width=300, corner_radius=15)
-        self.combo_pacientes.pack(pady=(5, 15), padx=25)
-        
-        # Cargar pacientes (Tu lógica de Supabase)
+        ctk.CTkLabel(frame_der, text="Paciente:",
+                     text_color=PALETTE["text_soft"],
+                     font=ctk.CTkFont(size=13)).pack(anchor="w", padx=25)
+        self.combo_pacientes = ctk.CTkComboBox(
+            frame_der, width=300, corner_radius=15,
+            fg_color=PALETTE["bg2"], border_color=PALETTE["teal_light"],
+            button_color=PALETTE["teal"], button_hover_color=PALETTE["teal_dark"],
+            text_color=PALETTE["text"]
+        )
+        self.combo_pacientes.pack(pady=(5, 18), padx=25)
+
         try:
             res = supabase.table("pacientes").select("id,nombre_completo").execute()
             self.pacientes_data = res.data or []
-            self.combo_pacientes.configure(values=[p["nombre_completo"] for p in self.pacientes_data])
-        except: pass
+            if self.pacientes_data:
+                self.combo_pacientes.configure(
+                    values=[p["nombre_completo"] for p in self.pacientes_data])
+                self.combo_pacientes.set(self.pacientes_data[0]["nombre_completo"])
+            else:
+                self.combo_pacientes.configure(values=["Sin pacientes registrados"])
+        except Exception as e:
+            messagebox.showwarning("Advertencia",
+                                   f"No se pudieron cargar los pacientes:\n{e}")
 
-        # Campo de Hora
-        ctk.CTkLabel(frame_der, text="Hora (HH:MM):", text_color=PALETTE["text_soft"]).pack(anchor="w", padx=25)
-        self.entry_hora_cita = ctk.CTkEntry(frame_der, placeholder_text="Ej: 10:00 AM", width=300)
-        self.entry_hora_cita.pack(pady=(5, 20), padx=25)
+        ctk.CTkLabel(frame_der, text="Hora (HH:MM):",
+                     text_color=PALETTE["text_soft"],
+                     font=ctk.CTkFont(size=13)).pack(anchor="w", padx=25)
+        self.entry_hora_cita = ctk.CTkEntry(
+            frame_der, placeholder_text="Ej: 10:00",
+            width=300, corner_radius=15,
+            fg_color=PALETTE["bg2"], border_color=PALETTE["teal_light"],
+            text_color=PALETTE["text"]
+        )
+        self.entry_hora_cita.pack(pady=(5, 8), padx=25)
 
-        # Botón Final
-        ctk.CTkButton(frame_der, text="Agendar Cita", 
+        ctk.CTkLabel(frame_der, text="ⓘ  La fecha se toma del calendario",
+                     font=ctk.CTkFont(size=11, slant="italic"),
+                     text_color=PALETTE["text_light"]).pack(anchor="w", padx=25, pady=(0, 20))
+
+        ctk.CTkFrame(frame_der, fg_color=PALETTE["card_border"],
+                     height=1).pack(fill="x", padx=25, pady=(0, 20))
+
+        ctk.CTkButton(frame_der, text="✓  Agendar Cita",
                       fg_color=PALETTE["rose"], hover_color=PALETTE["rose_dark"],
-                      height=40, corner_radius=20,
-                      command=self.guardar_cita).pack(pady=20, padx=25)
-    # ── Módulos genéricos (en desarrollo) ────────────────
+                      text_color="white", height=42, corner_radius=21,
+                      font=ctk.CTkFont(size=14, weight="bold"),
+                      command=self.guardar_cita).pack(pady=0, padx=25, fill="x")
+
+    def _cargar_citas_dia(self):
+        """Muestra las citas del día seleccionado en el calendario."""
+        for w in self.frame_citas_dia.winfo_children():
+            w.destroy()
+        try:
+            # selection_get() devuelve un objeto date directamente — más confiable
+            fecha_obj = self.cal.selection_get()
+            fecha_db  = fecha_obj.strftime("%Y-%m-%d")
+            res = supabase.table("citas").select(
+                "hora_cita, pacientes(nombre_completo)"
+            ).eq("fecha_cita", fecha_db).order("hora_cita").execute()
+
+            citas = res.data or []
+            if not citas:
+                ctk.CTkLabel(self.frame_citas_dia,
+                             text="Sin citas para este día.",
+                             text_color=PALETTE["text_light"],
+                             font=ctk.CTkFont(size=12, slant="italic")).pack(pady=8)
+            else:
+                for c in citas:
+                    nombre = c.get("pacientes", {}).get("nombre_completo", "—")
+                    hora   = c.get("hora_cita", "—")
+                    fila = ctk.CTkFrame(self.frame_citas_dia,
+                                        fg_color=PALETTE["card"], corner_radius=8)
+                    fila.pack(fill="x", pady=3, padx=4)
+                    ctk.CTkLabel(fila, text=f"🕐 {hora}",
+                                 font=ctk.CTkFont(size=12, weight="bold"),
+                                 text_color=PALETTE["teal_dark"],
+                                 width=70).pack(side="left", padx=8, pady=6)
+                    ctk.CTkLabel(fila, text=nombre,
+                                 font=ctk.CTkFont(size=12),
+                                 text_color=PALETTE["text"]).pack(side="left", padx=4)
+        except Exception as e:
+            print(f"Error al cargar citas: {e}")
+
+    def guardar_cita(self):
+        """Valida y guarda la cita en Supabase."""
+        nombre = self.combo_pacientes.get().strip()
+        hora   = self.entry_hora_cita.get().strip()
+
+        if not nombre or not hora or nombre == "Sin pacientes registrados":
+            messagebox.showwarning("Atención", "Selecciona un paciente e ingresa la hora.")
+            return
+
+        if not re.match(r"^([01]\d|2[0-3]):([0-5]\d)$", hora):
+            messagebox.showwarning("Formato incorrecto",
+                                   "La hora debe estar en formato HH:MM\nEj: 09:30 o 14:00")
+            return
+
+        try:
+            fecha_obj = self.cal.selection_get()
+            fecha_db  = fecha_obj.strftime("%Y-%m-%d")
+        except Exception:
+            messagebox.showwarning("Error", "No se pudo leer la fecha del calendario.")
+            return
+
+        paciente = next(
+            (p for p in self.pacientes_data if p["nombre_completo"] == nombre), None)
+        if not paciente:
+            messagebox.showwarning("Error", "Paciente no válido.")
+            return
+
+        try:
+            supabase.table("citas").insert({
+                "paciente_id": paciente["id"],
+                "fecha_cita":      fecha_db,
+                "hora_cita":       hora,
+                "estado":          "programada",
+            }).execute()
+            messagebox.showinfo("¡Éxito!", f"Cita agendada:\n👤 {nombre}\n📅 {fecha_db}  🕐 {hora}")
+            self.entry_hora_cita.delete(0, "end")
+            self._cargar_citas_dia()
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo guardar la cita:\n{e}")
+
+    # ── Módulos genéricos ────────────────────────────────
 
     def _modulo_generico(self, titulo, bg=None, fg=None):
         self.limpiar_pantalla()
@@ -680,7 +787,7 @@ class AppKalico(ctk.CTk):
         fg = fg or PALETTE["teal_dark"]
         self._header_secundario(titulo, bg, fg)
         ctk.CTkLabel(self.main_frame,
-                     text="🚧\n\nMódulo en desarrollo.\nEstarà disponible próximamente.",
+                     text="🚧\n\nMódulo en desarrollo.\nEstará disponible próximamente.",
                      font=ctk.CTkFont(size=18),
                      text_color=PALETTE["text_soft"]).pack(pady=80)
 
@@ -705,7 +812,7 @@ class AppKalico(ctk.CTk):
     def click_config(self):
         self._modulo_generico("⚙️  Configuración", "#EDE8F8", PALETTE["lav_dark"])
 
-    def click_stats(self): 
+    def click_stats(self):
         self._modulo_generico("📊  Estadísticas", PALETTE["rose_light"], PALETTE["rose_dark"])
 
 
