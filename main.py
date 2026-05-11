@@ -589,7 +589,7 @@ class AppKalico(ctk.CTk):
         except Exception as e:
             messagebox.showerror("Error", str(e))
 
-    # ── Módulo Agenda (MEJORADO) ──────────────────────────
+    # ── Módulo Agenda ──────────────────────────
 
     def click_citas(self):
         self.limpiar_pantalla()
@@ -802,20 +802,200 @@ class AppKalico(ctk.CTk):
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo guardar la cita:\n{e}")
 
-    # ── Módulos genéricos ────────────────────────────────
-
-    def _modulo_generico(self, titulo, bg=None, fg=None):
-        self.limpiar_pantalla()
-        bg = bg or PALETTE["teal_light"]
-        fg = fg or PALETTE["teal_dark"]
-        self._header_secundario(titulo, bg, fg)
-        ctk.CTkLabel(self.main_frame,
-                     text="🚧\n\nMódulo en desarrollo.\nEstará disponible próximamente.",
-                     font=ctk.CTkFont(size=18),
-                     text_color=PALETTE["text_soft"]).pack(pady=80)
+    # MODULO DE HISTORIAS----------------
 
     def click_historias(self):
-        self._modulo_generico("🧠  Historias Clínicas", "#EDE8F8", PALETTE["lav_dark"])
+        self.limpiar_pantalla()
+        self._header_secundario("🧠 Historias Clínicas", "#EDE8F8", PALETTE["lav_dark"])
+
+        cuerpo = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        cuerpo.pack(fill="both", expand=True, padx=40, pady=20)
+
+        # --- Selector de Paciente ---
+        selector_frame = ctk.CTkFrame(cuerpo, fg_color=PALETTE["card"], corner_radius=15)
+        selector_frame.pack(fill="x", pady=(0, 20))
+
+        ctk.CTkLabel(selector_frame, text="Seleccione Paciente:",
+                     font=ctk.CTkFont(size=13, weight="bold"),
+                     text_color=PALETTE["text_soft"]).pack(side="left", padx=20, pady=15)
+
+        self.combo_historial = ctk.CTkComboBox(
+            selector_frame, width=350, corner_radius=15,
+            fg_color=PALETTE["bg2"], border_color=PALETTE["lavender"],
+            button_color=PALETTE["lavender"],
+            command=self._cargar_historia_paciente
+        )
+        self.combo_historial.pack(side="left", padx=10)
+
+        try:
+            res = supabase.table("pacientes").select("nombre_completo").execute()
+            nombres = [p["nombre_completo"] for p in res.data]
+            self.combo_historial.configure(values=nombres)
+        except Exception as e:
+            print(f"Error al cargar pacientes: {e}")
+
+        paneles = ctk.CTkFrame(cuerpo, fg_color="transparent")
+        paneles.pack(fill="both", expand=True)
+
+        # COLUMNA IZQUIERDA
+        col_izq = ctk.CTkFrame(paneles, fg_color=PALETTE["card"], corner_radius=20)
+        col_izq.pack(side="left", fill="both", expand=True, padx=(0, 10))
+
+        ctk.CTkLabel(col_izq, text="📝 Nueva Nota de Sesión",
+                     font=ctk.CTkFont(family="Georgia", size=16, weight="bold"),
+                     text_color=PALETTE["lav_dark"]).pack(pady=15)
+
+        self.txt_motivo = self._crear_campo_historia(col_izq, "Motivo de la consulta:", height=60)
+        self.txt_notas  = self._crear_campo_historia(col_izq, "Evolución / Notas:", height=200)
+        self.txt_diag   = self._crear_campo_historia(col_izq, "Diagnóstico / Tareas:", height=60)
+
+        # ✅ NUEVO: Campo de fecha editable
+        ctk.CTkLabel(col_izq, text="Fecha de la sesión:",
+                     font=ctk.CTkFont(size=12),
+                     text_color=PALETTE["text_soft"]).pack(anchor="w", padx=25)
+        self.entry_fecha_historia = ctk.CTkEntry(
+            col_izq, placeholder_text=datetime.now().strftime("%Y-%m-%d"),
+            width=200, corner_radius=12, border_width=1,
+            border_color=PALETTE["lavender"]
+        )
+        self.entry_fecha_historia.pack(anchor="w", padx=25, pady=(5, 10))
+
+        ctk.CTkButton(col_izq, text="💾 Guardar Historia Clínica",
+                      fg_color=PALETTE["lavender"], hover_color=PALETTE["lav_dark"],
+                      text_color="white", height=45, corner_radius=22,
+                      font=ctk.CTkFont(weight="bold"),
+                      command=self.guardar_historia).pack(pady=20, padx=40, fill="x")
+
+        # COLUMNA DERECHA
+        col_der = ctk.CTkFrame(paneles, fg_color=PALETTE["bg2"], corner_radius=20, width=400)
+        col_der.pack(side="right", fill="both", padx=(10, 0))
+
+        ctk.CTkLabel(col_der, text="📅 Sesiones Anteriores",
+                     font=ctk.CTkFont(size=14, weight="bold"),
+                     text_color=PALETTE["text_soft"]).pack(pady=10)
+
+        self.scroll_historial = ctk.CTkScrollableFrame(col_der, fg_color="transparent")
+        self.scroll_historial.pack(fill="both", expand=True, padx=10, pady=10)
+
+    def _crear_campo_historia(self, parent, label_text, height):
+        ctk.CTkLabel(parent, text=label_text, font=ctk.CTkFont(size=12),
+                     text_color=PALETTE["text_soft"]).pack(anchor="w", padx=25)
+        txt = ctk.CTkTextbox(parent, height=height, corner_radius=12,
+                             border_width=1, border_color=PALETTE["lavender"])
+        txt.pack(fill="x", padx=25, pady=(5, 10))
+        return txt
+
+    def guardar_historia(self):
+        nombre_sel = self.combo_historial.get()
+        motivo = self.txt_motivo.get("1.0", "end-1c").strip()
+        notas  = self.txt_notas.get("1.0", "end-1c").strip()
+        diag   = self.txt_diag.get("1.0", "end-1c").strip()
+
+        # ✅ NUEVO: Validar que el paciente sea válido
+        if not nombre_sel or nombre_sel not in self.combo_historial.cget("values"):
+            messagebox.showwarning("Atención", "Seleccione un paciente válido de la lista.")
+            return
+
+        if not notas:
+            messagebox.showwarning("Atención", "Las notas de sesión no pueden estar vacías.")
+            return
+
+        # ✅ NUEVO: Fecha editable con fallback a hoy
+        fecha_input = self.entry_fecha_historia.get().strip()
+        if fecha_input:
+            try:
+                datetime.strptime(fecha_input, "%Y-%m-%d")
+                fecha_hoy = fecha_input
+            except ValueError:
+                messagebox.showwarning("Formato", "La fecha debe ser AAAA-MM-DD.")
+                return
+        else:
+            fecha_hoy = datetime.now().strftime("%Y-%m-%d")
+
+        try:
+            res_p = supabase.table("pacientes").select("id").eq("nombre_completo", nombre_sel).single().execute()
+            p_id  = res_p.data["id"]
+
+            supabase.table("Historias").insert({
+                "id_del_paciente": p_id,
+                "fecha_consulta":  fecha_hoy,
+                "motivo":          motivo,
+                "notas_sesion":    notas,
+                "diagnostico":     diag
+            }).execute()
+
+            messagebox.showinfo("Éxito", "Historia clínica guardada correctamente.")
+            self.txt_motivo.delete("1.0", "end")
+            self.txt_notas.delete("1.0", "end")
+            self.txt_diag.delete("1.0", "end")
+            self.entry_fecha_historia.delete(0, "end")
+            self._cargar_historia_paciente(nombre_sel)
+
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo guardar: {e}")
+
+    def _cargar_historia_paciente(self, nombre_sel):
+        for w in self.scroll_historial.winfo_children():
+            w.destroy()
+        try:
+            res_p = supabase.table("pacientes").select("id").eq("nombre_completo", nombre_sel).single().execute()
+            if not res_p.data:
+                return
+
+            res_h = supabase.table("Historias").select("*").eq(
+                "id_del_paciente", res_p.data["id"]
+            ).order("fecha_consulta", desc=True).execute()
+
+            if not res_h.data:
+                ctk.CTkLabel(self.scroll_historial, text="Sin registros previos.",
+                             font=ctk.CTkFont(slant="italic")).pack(pady=20)
+            else:
+                for h in res_h.data:
+                    card = ctk.CTkFrame(self.scroll_historial,
+                                        fg_color=PALETTE["card"], corner_radius=10)
+                    card.pack(fill="x", pady=5, padx=5)
+
+                    # ✅ NUEVO: Fila superior con fecha + botón eliminar
+                    fila_top = ctk.CTkFrame(card, fg_color="transparent")
+                    fila_top.pack(fill="x", padx=10, pady=(6, 0))
+
+                    ctk.CTkLabel(fila_top, text=f"📅 {h['fecha_consulta']}",
+                                 font=ctk.CTkFont(weight="bold"),
+                                 text_color=PALETTE["lav_dark"]).pack(side="left")
+
+                    ctk.CTkButton(
+                        fila_top, text="✕", width=26, height=26,
+                        corner_radius=13, fg_color="#FADADD",
+                        hover_color="#E88080", text_color="#E88080",
+                        font=ctk.CTkFont(size=11, weight="bold"),
+                        command=lambda hid=h["id"], n=nombre_sel: self._eliminar_historia(hid, n)
+                    ).pack(side="right")
+
+                    ctk.CTkLabel(card, text=f"Motivo: {h['motivo']}",
+                                 font=ctk.CTkFont(size=11, weight="bold")).pack(anchor="w", padx=10)
+                    ctk.CTkLabel(card, text=h["notas_sesion"], wraplength=300,
+                                 justify="left", font=ctk.CTkFont(size=11)).pack(anchor="w", padx=10, pady=3)
+
+                    # ✅ NUEVO: Diagnóstico en la tarjeta
+                    ctk.CTkLabel(card, text=f"Diagnóstico: {h['diagnostico'] or '—'}",
+                                 font=ctk.CTkFont(size=11, slant="italic"),
+                                 text_color=PALETTE["lav_dark"]).pack(anchor="w", padx=10, pady=(0, 8))
+
+        except Exception as e:
+            print(f"Error al cargar historial: {e}")
+
+    # ✅ NUEVO: Método para eliminar historia
+    def _eliminar_historia(self, historia_id, nombre_sel):
+        if messagebox.askyesno("Eliminar",
+                               "¿Eliminar este registro?\nEsta acción no se puede deshacer."):
+            try:
+                supabase.table("Historias").delete().eq("id", historia_id).execute()
+                messagebox.showinfo("Eliminado", "Registro eliminado correctamente.")
+                self._cargar_historia_paciente(nombre_sel)
+            except Exception as e:
+                messagebox.showerror("Error", f"No se pudo eliminar:\n{e}")
+ 
+  # MODULOS A TRABAJAR--------
 
     def click_tratamientos(self):
         self._modulo_generico("💊  Tratamientos", PALETTE["teal_light"], PALETTE["teal_dark"])
