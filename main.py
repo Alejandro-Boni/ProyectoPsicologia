@@ -705,39 +705,62 @@ class AppKalico(ctk.CTk):
                       command=self.guardar_cita).pack(pady=0, padx=25, fill="x")
 
     def _cargar_citas_dia(self):
-        """Muestra las citas del día seleccionado en el calendario."""
+        """Muestra las citas del día seleccionado con opción de eliminar."""
         for w in self.frame_citas_dia.winfo_children():
             w.destroy()
         try:
-            # selection_get() devuelve un objeto date directamente — más confiable
+            # Usamos selection_get para evitar errores de formato de texto
             fecha_obj = self.cal.selection_get()
             fecha_db  = fecha_obj.strftime("%Y-%m-%d")
+
+            # Traemos el 'id' (importante para el delete) y los datos de tu DB
             res = supabase.table("citas").select(
-                "hora_cita, pacientes(nombre_completo)"
+                "id, hora_cita, pacientes(nombre_completo)"
             ).eq("fecha_cita", fecha_db).order("hora_cita").execute()
 
             citas = res.data or []
             if not citas:
-                ctk.CTkLabel(self.frame_citas_dia,
-                             text="Sin citas para este día.",
+                ctk.CTkLabel(self.frame_citas_dia, text="Sin citas para este día.",
                              text_color=PALETTE["text_light"],
                              font=ctk.CTkFont(size=12, slant="italic")).pack(pady=8)
             else:
                 for c in citas:
                     nombre = c.get("pacientes", {}).get("nombre_completo", "—")
                     hora   = c.get("hora_cita", "—")
-                    fila = ctk.CTkFrame(self.frame_citas_dia,
-                                        fg_color=PALETTE["card"], corner_radius=8)
+                    cita_id = c.get("id")
+
+                    fila = ctk.CTkFrame(self.frame_citas_dia, fg_color=PALETTE["card"], corner_radius=8)
                     fila.pack(fill="x", pady=3, padx=4)
+                    
                     ctk.CTkLabel(fila, text=f"🕐 {hora}",
                                  font=ctk.CTkFont(size=12, weight="bold"),
                                  text_color=PALETTE["teal_dark"],
                                  width=70).pack(side="left", padx=8, pady=6)
+                    
                     ctk.CTkLabel(fila, text=nombre,
                                  font=ctk.CTkFont(size=12),
-                                 text_color=PALETTE["text"]).pack(side="left", padx=4)
+                                 text_color=PALETTE["text"]).pack(side="left", padx=4, expand=True, anchor="w")
+
+                    # BOTÓN ELIMINAR ESTÉTICO
+                    ctk.CTkButton(fila, text="✕", width=28, height=28,
+                                  fg_color="#FADADD", hover_color="#E88080",
+                                  text_color="#E88080", corner_radius=6,
+                                  font=ctk.CTkFont(size=12, weight="bold"),
+                                  command=lambda cid=cita_id: self.eliminar_cita(cid)).pack(side="right", padx=8)
         except Exception as e:
             print(f"Error al cargar citas: {e}")
+
+    def eliminar_cita(self, cita_id):
+        """Borra una cita de Supabase tras confirmar con el usuario."""
+        if messagebox.askyesno("Confirmar", "¿Estás seguro de que deseas cancelar esta cita?"):
+            try:
+                # Ejecuta el delete en Supabase usando el ID único
+                supabase.table("citas").delete().eq("id", cita_id).execute()
+                
+                messagebox.showinfo("Éxito", "La cita ha sido eliminada.")
+                self._cargar_citas_dia() # Refresca la lista automáticamente
+            except Exception as e:
+                messagebox.showerror("Error", f"No se pudo eliminar la cita:\n{e}")
 
     def guardar_cita(self):
         """Valida y guarda la cita en Supabase."""
